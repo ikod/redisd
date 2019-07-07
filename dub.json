@@ -1,0 +1,22 @@
+{
+	"name": "redisd",
+	"authors": [
+		"Igor Khasilev"
+	],
+	"description": "A minimal D application.",
+	"copyright": "Copyright © 2019, Igor Khasilev",
+	"license": "BSD",
+	"debugVersions": ["redisd"],
+	"configurations":[
+		{
+			"name": "std"
+		},
+		{
+			"name": "hio",
+			"versions": ["hio"],
+			"dependencies": {
+				"hio": "*"
+			}
+		}
+	]
+}
