@@ -11,32 +11,59 @@ import std.experimental.logger;
 import redisd.connection;
 import redisd.codec;
 
+import url: URL, parseURL;
+
 private immutable bufferSize = 4*1024;
 
+///
+class NotAuthenticated : Exception {
+    ///
+    this(string msg) {
+        super(msg);
+    }
+}
+///
 class Client {
 
     private {
-        string          _connect_string;
+        URL             _url;
         ConnectionMaker _connection_maker;
         Connection      _connection;
-        DecodeStream    _input_stream;
+        Decoder         _input_stream;
     }
 
-    this(string connect_string="localhost:6379", ConnectionMaker connectionMaker=&stdConnectionMaker) @safe {
-        _connect_string = connect_string;
+    this(string url="redis://localhost:6379", ConnectionMaker connectionMaker=&stdConnectionMaker) {
+        _url = parseURL(url);
         _connection_maker = connectionMaker;
         _connection = _connection_maker();
-        _connection.connect(_connect_string);
-        _input_stream = new DecodeStream();
+        _connection.connect(_url);
+        _input_stream = new Decoder();
+        if ( _url.pass ) {
+            auto v = execCommand("AUTH", _url.pass);
+            if ( v.svar != "OK" ) {
+                throw new NotAuthenticated("Can't authenticate");
+            }
+        }
     }
 
-    RedisValue makeCommand(A...)(A args) {
+    private void reconnect() {
+        _connection = _connection_maker();
+        _connection.connect(_url);
+        _input_stream = new Decoder;
+        if (_url.pass) {
+            auto auth = execCommand("AUTH", _url.pass);
+            if (auth.svar != "OK") {
+                throw new NotAuthenticated("Can't authenticate");
+            }
+        }
+    }
+    RedisdValue makeCommand(A...)(A args) {
         return redisValue(tuple(args));
     }
 
-    RedisValue transaction(RedisValue[] commands) {
-        RedisValue[] results;
-        RedisValue r = this.execCommand("MULTI");
+    RedisdValue transaction(RedisdValue[] commands) {
+        RedisdValue[] results;
+        RedisdValue r = this.execCommand("MULTI");
         foreach (c; commands) {
             exec(c);
         }
@@ -44,10 +71,10 @@ class Client {
         return r;
     }
 
-    RedisValue[] pipeline(RedisValue[] commands) {
+    RedisdValue[] pipeline(RedisdValue[] commands) {
         immutable(ubyte)[] data = commands.map!encode.join();
         _connection.send(data);
-        RedisValue[] response;
+        RedisdValue[] response;
         while (response.length < commands.length) {
             debug(redisd) tracef("response length=%d, commands.length=%d", response.length, commands.length);
             auto b = _connection.recv(bufferSize);
@@ -63,12 +90,10 @@ class Client {
                 response ~= v;
                 if (v.type == ValueType.Error
                         && cast(string) v.svar[4 .. 18] == "Protocol error") {
-                    _connection.close();
                     debug (redisd)
                         trace("reopen connection");
-                    _connection = _connection_maker();
-                    _connection.connect(_connect_string);
-                    _input_stream = new DecodeStream;
+                    _connection.close();
+                    reconnect();
                     return response;
                 }
             }
@@ -76,8 +101,8 @@ class Client {
         return response;
     }
 
-    private RedisValue exec(RedisValue command) {
-        RedisValue response;
+    private RedisdValue exec(RedisdValue command) {
+        RedisdValue response;
         _connection.send(command.encode);
         while (true) {
             auto b = _connection.recv(bufferSize);
@@ -90,22 +115,22 @@ class Client {
                 break;
             }
         }
-        if (response.type == ValueType.Error && cast(string) response.svar[4 .. 18]
-                == "Protocol error") {
+        if (response.type == ValueType.Error && response.svar[4 .. 18] == "Protocol error") {
             _connection.close();
             debug (redisd)
                 trace("reopen connection");
-            _connection = _connection_maker();
-            _connection.connect(_connect_string);
-            _input_stream = new DecodeStream;
+            reconnect();
+        }
+        if (response.type == ValueType.Error && response.svar[0..6] == "NOAUTH" ) {
+            throw new NotAuthenticated("Auth required");
         }
         return response;
     }
 
-    RedisValue execCommand(A...)(A args) {
+    RedisdValue execCommand(A...)(A args) {
         immutable(ubyte)[][] data;
-        RedisValue request = makeCommand(args);
-        RedisValue response;
+        RedisdValue request = makeCommand(args);
+        RedisdValue response;
         _connection.send(request.encode);
         while(true) {
             auto b = _connection.recv(bufferSize);
@@ -123,23 +148,24 @@ class Client {
                 cast(string)response.svar[4..18] == "Protocol error") {
             _connection.close();
             debug(redisd) trace("reopen connection");
-            _connection = _connection_maker();
-            _connection.connect(_connect_string);
-            _input_stream = new DecodeStream;
+            reconnect();
+        }
+        if (response.type == ValueType.Error && response.svar[0 .. 6] == "NOAUTH") {
+            throw new NotAuthenticated("Auth required");
         }
         return response;
     }
 
-    RedisValue set(K, V)(K k, V v) {
+    RedisdValue set(K, V)(K k, V v) {
         return execCommand("SET", k, v);
     }
 
-    RedisValue get(K)(K k) {
+    RedisdValue get(K)(K k) {
         return execCommand("GET", k);
     }
 
-    RedisValue read() {
-        RedisValue response;
+    RedisdValue read() {
+        RedisdValue response;
         response = _input_stream.get();
         while(response.type == ValueType.Incomplete) {
             auto b = _connection.recv(bufferSize);
@@ -157,9 +183,7 @@ class Client {
             _connection.close();
             debug (redisd)
                 trace("reopen connection");
-            _connection = _connection_maker();
-            _connection.connect(_connect_string);
-            _input_stream = new DecodeStream;
+            reconnect();
         }
         return response;
     }

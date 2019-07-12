@@ -13,6 +13,8 @@ import std.range;
 
 import std.experimental.logger;
 
+import nbuff;
+
 ///
 enum ValueType : ubyte {
     Incomplete = 0,
@@ -42,12 +44,12 @@ class WrongOffset : Exception {
     }
 }
 
-struct RedisValue {
+struct RedisdValue {
     private {
         ValueType       _type;
         string          _svar;
         long            _ivar;
-        RedisValue[]    _list;
+        RedisdValue[]    _list;
     }
     ValueType type() @safe const {
         return _type;
@@ -65,14 +67,14 @@ struct RedisValue {
         _type = ValueType.Integer;
         _ivar = v;
         _svar = string.init;
-        _list = RedisValue[].init;
+        _list = RedisdValue[].init;
     }
 
     void opAssign(string v) @safe {
         _type = ValueType.String;
         _svar = v;
         _ivar = long.init;
-        _list = RedisValue[].init;
+        _list = RedisdValue[].init;
     }
     string toString() {
         switch(_type) {
@@ -96,11 +98,11 @@ struct RedisValue {
     }
 }
 
-alias DecodeResult = Tuple!(RedisValue, "value", immutable(ubyte)[], "rest");
+alias DecodeResult = Tuple!(RedisdValue, "value", immutable(ubyte)[], "rest");
 
-RedisValue redisValue(T)(T v) 
+RedisdValue redisValue(T)(T v) 
 if (isSomeString!T || isIntegral!T) {
-    RedisValue _v;
+    RedisdValue _v;
     static if (isIntegral!T) {
         _v._type = ValueType.Integer;
         _v._ivar = v;
@@ -114,10 +116,10 @@ if (isSomeString!T || isIntegral!T) {
     return _v;
 }
 
-RedisValue redisValue(T)(T v) if (isTuple!T) {
-    RedisValue _v;
+RedisdValue redisValue(T)(T v) if (isTuple!T) {
+    RedisdValue _v;
     _v._type = ValueType.List;
-    RedisValue[] l;
+    RedisdValue[] l;
     foreach (element; v) {
         l ~= redisValue(element);
     }
@@ -125,11 +127,11 @@ RedisValue redisValue(T)(T v) if (isTuple!T) {
     return _v;
 }
 
-RedisValue redisValue(T:U[], U)(T v) 
+RedisdValue redisValue(T:U[], U)(T v) 
 if (isArray!T && !isSomeString!T) {
-    RedisValue _v;
+    RedisdValue _v;
     _v._type = ValueType.List;
-    RedisValue[] l;
+    RedisdValue[] l;
     foreach (element; v) {
         l ~= redisValue(element);
     }
@@ -137,7 +139,7 @@ if (isArray!T && !isSomeString!T) {
     return _v;
 }
 
-immutable(ubyte)[] encode(RedisValue v) @safe {
+immutable(ubyte)[] encode(RedisdValue v) @safe {
     string encoded;
     switch(v._type) {
     case ValueType.Error:
@@ -179,7 +181,7 @@ immutable(ubyte)[] encode(RedisValue v) @safe {
 }
 
 @safe unittest {
-    RedisValue v;
+    RedisdValue v;
     v = "abc";
     assert(encode(v) == "+abc\r\n".representation);
     v = -1234567890;
@@ -199,7 +201,7 @@ immutable(ubyte)[] encode(RedisValue v) @safe {
 
 DecodeResult decode(immutable(ubyte)[] data) @safe {
     assert(data.length >= 1);
-    RedisValue v;
+    RedisdValue v;
     switch(data[0]) {
     case '+':
         // simple string
@@ -250,7 +252,7 @@ DecodeResult decode(immutable(ubyte)[] data) @safe {
             return DecodeResult(v, s[2]);
         }
         auto rest = s[2];
-        RedisValue[] array;
+        RedisdValue[] array;
 
         while(len>0) {
             auto d = decode(rest);
@@ -268,7 +270,7 @@ DecodeResult decode(immutable(ubyte)[] data) @safe {
 }
 
 @safe unittest {
-    RedisValue v;
+    RedisdValue v;
     v = "a";
     v = 1;
 }
@@ -311,173 +313,18 @@ DecodeResult decode(immutable(ubyte)[] data) @safe {
     assert(r == "xyz".representation);
 }
 
-package alias Chunks = immutable(ubyte)[][];
-
-struct Flat {
-    private {
-        Chunks              _chunks;
-        immutable size_t    _totalLength;
-    }
-    this(Chunks c) @safe {
-        _chunks = c;
-        _totalLength = _chunks.map!"a.length".sum;
-    }
-
-    /// compare chunks bytes starting from `position` with buffer b
-    private int cmp(size_t pos, const(ubyte)[] b) @safe {
-        if ( _totalLength < b.length ) {
-            return -1;
-        }
-        if ( pos >= _totalLength - 1 ) {
-            throw new WrongOffset("%d>=%d".format(pos, _totalLength - 1));
-        }
-        int i;
-        while( pos >= _chunks[i].length ) {
-            pos -= _chunks[i].length;
-            debug (redisd)
-                tracef("skip chunk %d", i);
-            i++;
-        }
-        debug(redisd) tracef("i=%d, pos=%d", i, pos);
-        size_t bp;
-        while(bp < b.length) {
-            debug (redisd)
-                tracef("i=%d, pos=%d, _chunks[i].length=%d, bp=%d", i, pos, _chunks[i].length, bp);
-            auto v = _chunks[i][pos] - b[bp];
-            if ( v != 0 ) {
-                debug (redisd) tracef("return %d", v);
-                return v;
-            }
-            bp++;
-            pos++;
-            if ( pos == _chunks[i].length ) {
-                debug(redisd) trace("next chunk");
-                pos = 0;
-                i++;
-            }
-        }
-        debug (redisd)
-            tracef("return 0");
-        return 0;
-    }
-
-    /// starting from prevpos count until byte b
-    private size_t countUntil(size_t prevpos, ubyte b) @safe {
-        size_t p = -1;
-        int i, l;
-        if (_chunks.length == 0)
-            return p;
-        while (prevpos > _chunks[i].length && i < _chunks.length - 1) {
-            prevpos -= _chunks[i].length;
-            l += _chunks[i].length;
-            i++;
-        }
-        if (i == _chunks.length - 1 && prevpos >= _chunks[i].length) {
-            throw new BadDataFormat("prev pos too far");
-        }
-        debug (redisd)
-            tracef("l=%d, prevpos=%d", l, prevpos);
-
-        while( i < _chunks.length ) {
-            auto c = _chunks[i][prevpos..$].countUntil(b);
-            if ( c >= 0 ) {
-                debug (redisd)
-                    tracef("l=%d, c=%d", l, c);
-                return l+c;
-            }
-            l+=_chunks[i].length;
-            prevpos = 0;
-            i++;
-        }
-
-        return p;
-    }
-
-    /// starting from pos count until buffer 'b'
-    private size_t countUntil(size_t pos, const(ubyte)[] b) @safe {
-        if (b.length == 0) {
-            throw new BadDataFormat("search for empty substr?");
-        }
-        if (pos == -1) {
-            return -1;
-        }
-        if (_chunks.length == 0)
-            return -1;
-
-        auto needleLen = b.length;
-
-        while ( pos < _totalLength - needleLen + 1 ) {
-            debug(redisd) tracef("test position %d", pos);
-            if ( cmp(pos, b) == 0 ) {
-                return pos;
-            }
-            pos++;
-        }
-        return -1;
-    }
-
-    immutable(ubyte)[] data() @safe {
-        immutable(ubyte)[] v;
-        v.reserve(_totalLength);
-        foreach(c; _chunks) {
-            v ~= c;
-        }
-        return v;
-    }
-
-    // like substring but for chunks
-    Flat sub(size_t from, size_t to) @safe {
-        if ( from == to ) {
-            return Flat([]);
-        }
-        if ( from < 0 || from >= _totalLength || to < from || to > _totalLength ) {
-            throw new WrongOffset("from: %d, to: %d, length: %d".format(from, to, _totalLength));
-        }
-        Chunks d;
-        int i;
-        while(from >= _chunks[i].length) {
-            from -= _chunks[i].length;
-            to -= _chunks[i].length;
-            i++;
-        }
-        while(to>0) {
-            auto to_copy = min(to, _chunks[i].length);
-            debug (redisd)
-                tracef("copy chunk [%(0x%02.2x,%)][%d..%d]: [%(0x%02.2x,%)]", _chunks[i], from, to_copy, _chunks[i][from .. to_copy]);
-            d ~= _chunks[i][from..to_copy];
-            from = 0;
-            to -= to_copy;
-            i++;
-        }
-        return Flat(d);
-    }
-
-    // find and split of Flat buffers
-    Flat[] findSplit(const(ubyte)[] b) @safe {
-        immutable i = countUntil(0, b);
-        if ( i == -1 ) {
-            return new Flat[](3);
-        }
-        Flat[] f;
-        f ~= sub(0, i);
-        f ~= Flat([b.idup]);
-        f ~= sub(i+b.length, _totalLength);
-        return f;
-    }
-}
-
-class DecodeStream {
+class Decoder {
     enum State {
         Init,
         Type,
     }
     private {
-        Chunks          _chunks;
+        Buffer          _chunks;
         State           _state;
         ValueType       _frontChunkType;
         size_t          _parsedPosition;
         size_t          _list_len;
-        RedisValue[]    _list;
+        RedisdValue[]    _list;
     }
     bool put(immutable(ubyte)[] chunk) @safe {
         assert(chunk.length > 0, "Chunk must not be emplty");
@@ -491,39 +338,40 @@ class DecodeStream {
                 throw new BadDataFormat("on chunk" ~ to!string(chunk));
             }
         }
-        _chunks ~= chunk;
+        _chunks.put(chunk);
         //_len += chunk.length;
         return false;
     }
 
-    private RedisValue _handleListElement(RedisValue v) @safe {
+    private RedisdValue _handleListElement(RedisdValue v) @safe {
         // we processing list element
         () @trusted {debug(redisd) tracef("appending %s to list", v);} ();
         _list ~= v;
         _list_len--;
         if (_list_len == 0) {
-            RedisValue result = {_type:ValueType.List, _list : _list};
+            RedisdValue result = {_type:ValueType.List, _list : _list};
             _list.length = 0;
             return result;
         }
-        return RedisValue();
+        return RedisdValue();
     }
 
-    RedisValue get() @safe {
-        RedisValue v;
+    RedisdValue get() @safe {
+        RedisdValue v;
     start:
         if (_chunks.length == 0 ) {
             return v;
         }
-        Flat f = Flat(_chunks);
-        Flat[] s;
-        debug(redisd) tracef("check var type %c", cast(char)_chunks[0][0]);
-        switch (_chunks[0][0]) {
+        // Flat f = Flat(_chunks);
+        // Flat[] s;
+        Buffer[] s;
+        debug(redisd) tracef("check var type %c", cast(char)_chunks[0]);
+        switch (_chunks[0]) {
         case ':':
-            s = f.findSplit(['\r', '\n']);
-            if ( s[1]._totalLength == 2 ) {
+            s = _chunks.findSplitOn(['\r', '\n']);
+            if ( s[1].length == 2 ) {
                 v = to!long(cast(string)s[0].data[1..$]);
-                _chunks = s[2]._chunks;
+                _chunks = s[2];
                 if (_list_len > 0) {
                     v = _handleListElement(v);
                     if (_list_len)
@@ -533,10 +381,10 @@ class DecodeStream {
             }
             break;
         case '+':
-            s = f.findSplit(['\r', '\n']);
-            if (s[1]._totalLength == 2) {
+            s = _chunks.findSplitOn(['\r', '\n']);
+            if (s[1].length == 2) {
                 v = cast(string) s[0].data[1 .. $];
-                _chunks = s[2]._chunks;
+                _chunks = s[2];
                 if (_list_len > 0) {
                     v = _handleListElement(v);
                     if (_list_len)
@@ -546,11 +394,11 @@ class DecodeStream {
             }
             break;
         case '-':
-            s = f.findSplit(['\r', '\n']);
-            if (s[1]._totalLength == 2) {
+            s = _chunks.findSplitOn(['\r', '\n']);
+            if (s[1].length == 2) {
                 v._type = ValueType.Error;
                 v._svar = cast(string) s[0].data[1 .. $];
-                _chunks = s[2]._chunks;
+                _chunks = s[2];
                 if (_list_len > 0) {
                     v = _handleListElement(v);
                     if (_list_len)
@@ -560,12 +408,12 @@ class DecodeStream {
             }
             break;
         case '$':
-            s = f.findSplit(['\r', '\n']);
-            if (s[1]._totalLength == 2) {
+            s = _chunks.findSplitOn(['\r', '\n']);
+            if (s[1].length == 2) {
                 size_t len = (cast(string)s[0].data[1..$]).to!long;
                 if ( len == -1 ) {
                     v._type = ValueType.Null;
-                    _chunks = s[2]._chunks;
+                    _chunks = s[2];
                     if (_list_len > 0) {
                         v = _handleListElement(v);
                         if (_list_len)
@@ -573,12 +421,12 @@ class DecodeStream {
                     }
                     return v;
                 }
-                if (s[2]._totalLength < len + 2) {
+                if (s[2].length < len + 2) {
                     return v;
                 }
-                auto data = s[2].sub(0, len).data;
+                auto data = s[2][0..len].data;
                 v = cast(string) data;
-                _chunks = s[2].sub(data.length+2, s[2]._totalLength)._chunks;
+                _chunks = s[2][data.length+2..s[2].length];
                 if (_list_len > 0) {
                     v = _handleListElement(v);
                     if (_list_len) goto start;
@@ -587,11 +435,11 @@ class DecodeStream {
             break;
         case '*':
             _list_len = -1;
-            s = f.findSplit(['\r', '\n']);
-            if (s[1]._totalLength == 2) {
+            s = _chunks.findSplitOn(['\r', '\n']);
+            if (s[1].length == 2) {
                 size_t len = (cast(string) s[0].data[1 .. $]).to!long;
                 _list_len = len;
-                _chunks = s[2]._chunks;
+                _chunks = s[2];
                 if (len == 0) {
                     v._type = ValueType.Null;
                     return v;
@@ -610,52 +458,8 @@ class DecodeStream {
 
 @safe unittest {
     globalLogLevel = LogLevel.info;
-    immutable(ubyte)[][] b = [
-        "123".representation,
-        "456".representation,
-        "789".representation
-    ];
-    auto f = Flat(b);
-    auto p = f.countUntil(0, '3');
-    assert(p==2);
-
-    p = f.countUntil(4, '3');
-    assert(p==-1);
-
-    p = f.countUntil(0, '4');
-    assert(p == 3);
-
-    assertThrown!BadDataFormat(f.countUntil(10, '4'));
-
-    p = f.countUntil(0, "34".representation);
-    assert(p == 2, "expected 2, got %d".format(p));
-
-    p = f.countUntil(0, "34567".representation);
-    assert(p == 2, "expected 2, got %d".format(p));
-
-    p = f.countUntil(0, "6789".representation);
-    assert(p == 5, "expected 5, got %d".format(p));
-    p = f.countUntil(0, "456".representation);
-    assert(p == 3, "expected 3, got %d".format(p));
-
-    auto s0 = f.sub(0, 6);
-    assert(s0._chunks == ["123".representation,"456".representation]);
-
-    auto s1 = f.sub(3, 6);
-    assert(s1._chunks == ["456".representation], "%s".format(s1));
-
-    auto s2 = f.sub(5, 6);
-    assert(s2._chunks == ["6".representation], "%s".format(s2));
-
-    auto split = f.findSplit("5".representation);
-    split = f.findSplit("567".representation);
-    info("test 1 ok");
-}
-
-@safe unittest {
-    globalLogLevel = LogLevel.info;
-    RedisValue str = {_type:ValueType.String, _svar : "abc"};
-    RedisValue err = {_type:ValueType.Error, _svar : "err"};
+    RedisdValue str = {_type:ValueType.String, _svar : "abc"};
+    RedisdValue err = {_type:ValueType.Error, _svar : "err"};
     auto b = redisValue(1001).encode 
             ~ redisValue(1002).encode
             ~ str.encode
@@ -667,7 +471,7 @@ class DecodeStream {
             ~ redisValue(1002).encode;
 
     foreach(chunkSize; 1..b.length) {
-        auto s = new DecodeStream();
+        auto s = new Decoder();
         foreach (c; b.chunks(chunkSize)) {
             s.put(c);
         }
@@ -697,5 +501,5 @@ class DecodeStream {
         v = s.get();
         assert(v._type == ValueType.Incomplete);
     }
-    info("test 2 ok");
+    info("test ok");
 }

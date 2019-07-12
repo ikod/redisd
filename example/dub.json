@@ -1,0 +1,36 @@
+{
+    "name": "test_redis",
+    "authors": [
+        "Igor Khasilev"
+    ],
+    "dependencies": {
+        "redisd": "*"
+    },
+    "debugVersions": ["redisd"],
+    "description": "A minimal D application.",
+    "copyright": "Copyright © 2019, Igor Khasilev",
+    "license": "proprietary",
+    "configurations": [
+        {
+            "name": "std",
+            "targetType": "executable",
+            "versions": ["std"]
+        },
+        {
+            "name": "vibe",
+            "targetType": "executable",
+            "versions":["vibe"],
+            "subConfigurations": {
+                "redisd": "vibe"
+            }
+        },
+        {
+            "name": "hio",
+            "targetType": "executable",
+            "versions":["hio"],
+            "subConfigurations": {
+                "redisd": "hio"
+            }
+        }
+    ]
+}

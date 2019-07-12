@@ -3,19 +3,30 @@
 	"authors": [
 		"Igor Khasilev"
 	],
-	"description": "A minimal D application.",
+	"description": "Redis client library",
 	"copyright": "Copyright © 2019, Igor Khasilev",
 	"license": "BSD",
 	"debugVersions": ["redisd"],
+    "dependencies": {
+		"nbuff": "~>0",
+		"urld": "~>2"
+    },
 	"configurations":[
 		{
 			"name": "std"
 		},
 		{
+			"name": "vibe",
+			"dependencies": {
+				"vibe-d": "~>0",
+				"eventcore": "*"
+			}
+		},
+		{
 			"name": "hio",
 			"versions": ["hio"],
 			"dependencies": {
-				"hio": "*"
+				"hio": "~>0"
 			}
 		}
 	]

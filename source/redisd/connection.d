@@ -4,8 +4,10 @@ import std.algorithm;
 import std.conv;
 import std.stdio;
 
+import url:URL;
+
 interface Connection {
-    void connect(string) @safe;
+    void connect(URL) @safe;
     size_t send(immutable(ubyte)[]);
     immutable(ubyte)[] recv(size_t);
     void close();
@@ -25,10 +27,9 @@ class SocketConnection : Connection {
         _socket = new Socket(AddressFamily.INET, SocketType.STREAM);
     }
 
-    override void connect(string connect_string) @safe {
-        auto s = connect_string.findSplit(":");
-        string host = s[0];
-        ushort port = to!ushort(s[2]);
+    override void connect(URL url) @safe {
+        string host = url.host;
+        ushort port = url.port;
         auto addr = new InternetAddress(host, port);
         _socket.connect(addr);
     }
@@ -57,8 +58,59 @@ Connection stdConnectionMaker() @safe {
     return new SocketConnection();
 }
 
+version(vibe) {
+    import vibe.vibe;
+    import vibe.core.net;
+    import eventcore.core;
+    import std.exception;
+    import std.socket;
+
+    Connection vibeConnectionMaker() @safe {
+        return new VibeSocketConnection();
+    }
+    ///
+    class VibeSocketConnection: Connection {
+        private {
+            TCPConnection _socket;
+        }
+        ///
+        this() @safe {
+        }
+        override void connect(URL url) {
+            auto a = getAddressInfo(url.host, AddressFamily.INET);
+            _socket = connectTCP(a[0].address.toAddrString, url.port);
+        }
+
+        override immutable(ubyte)[] recv(size_t to_receive) {
+            ubyte[] result;
+            result.length = to_receive;
+            auto r = _socket.read(result, IOMode.once);
+            if (r <= 0) {
+                return assumeUnique(result[0 .. 0]);
+            }
+            return assumeUnique(result[0..r]);
+        }
+
+        override size_t send(immutable(ubyte)[] data) {
+            try {
+                auto r = _socket.write(data, IOMode.all);
+                return r;
+            } catch (Exception e) {
+                logError(e.toString);
+                return -1;
+            }
+        }
+
+        override void close() {
+            _socket.close();
+        }
+    }
+}
+
 version(hio) {
     import std.datetime;
+    import std.socket;
+    import std.format;
     import hio.socket;
     import hio.events;
 
@@ -75,8 +127,9 @@ version(hio) {
             _socket = new HioSocket();
         }
 
-        override void connect(string connect_string) {
-            _socket.connect(connect_string, 1.seconds);
+        override void connect(URL url) {
+            auto a = getAddressInfo(url.host, AddressFamily.INET);
+            _socket.connect("%s:%d".format(a[0].address.toAddrString, url.port), 1.seconds);
         }
 
         override immutable(ubyte)[] recv(size_t to_receive) {
