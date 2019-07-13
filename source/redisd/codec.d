@@ -1,3 +1,4 @@
+///
 module redisd.codec;
 
 import std.string;
@@ -15,7 +16,7 @@ import std.experimental.logger;
 
 import nbuff;
 
-///
+/// Type of redis value
 enum ValueType : ubyte {
     Incomplete = 0,
     Null,
@@ -57,14 +58,15 @@ struct RedisdValue {
         long            _ivar;
         RedisdValue[]    _list;
     }
+    /// get type of value
     ValueType type() @safe const {
         return _type;
     }
-
+    /// if this is nil value
     bool empty() const {
         return _type == ValueType.Null;
     }
-
+    /// get string value
     string svar() @safe const {
         switch (_type) {
         case ValueType.String, ValueType.BulkString, ValueType.Error:
@@ -73,7 +75,7 @@ struct RedisdValue {
             throw new WrongDataAccess("You can't use svar for non-string value");
         }
     }
-
+    /// get integer value
     auto ivar() @safe const {
         switch (_type) {
         case ValueType.Integer:
@@ -96,6 +98,7 @@ struct RedisdValue {
         _ivar = long.init;
         _list = RedisdValue[].init;
     }
+
     string toString() {
         switch(_type) {
         case ValueType.Incomplete:
@@ -118,9 +121,7 @@ struct RedisdValue {
     }
 }
 
-alias DecodeResult = Tuple!(RedisdValue, "value", immutable(ubyte)[], "rest");
-
-///
+/// Build redis value from string or integer
 RedisdValue redisdValue(T)(T v)
 if (isSomeString!T || isIntegral!T) {
     RedisdValue _v;
@@ -137,7 +138,7 @@ if (isSomeString!T || isIntegral!T) {
     return _v;
 }
 
-///
+/// Build redis value from tuple
 RedisdValue redisdValue(T)(T v) if (isTuple!T) {
     RedisdValue _v;
     _v._type = ValueType.List;
@@ -149,6 +150,7 @@ RedisdValue redisdValue(T)(T v) if (isTuple!T) {
     return _v;
 }
 
+/// Build redis value from array
 RedisdValue redisdValue(T:U[], U)(T v)
 if (isArray!T && !isSomeString!T) {
     RedisdValue _v;
@@ -160,7 +162,7 @@ if (isArray!T && !isSomeString!T) {
     _v._list = l;
     return _v;
 }
-
+/// serialize RedisdValue to byte array
 immutable(ubyte)[] encode(RedisdValue v) @safe {
     string encoded;
     switch(v._type) {
@@ -202,6 +204,7 @@ immutable(ubyte)[] encode(RedisdValue v) @safe {
     }
 }
 
+///
 @safe unittest {
     RedisdValue v;
     v = "abc";
@@ -221,6 +224,9 @@ immutable(ubyte)[] encode(RedisdValue v) @safe {
     assert(v.encode.decode.value == v);
 }
 
+alias DecodeResult = Tuple!(RedisdValue, "value", immutable(ubyte)[], "rest");
+
+/// deserialize from byte array
 DecodeResult decode(immutable(ubyte)[] data) @safe {
     assert(data.length >= 1);
     RedisdValue v;
@@ -296,7 +302,7 @@ DecodeResult decode(immutable(ubyte)[] data) @safe {
     v = "a";
     v = 1;
 }
-
+///
 @safe unittest {
     DecodeResult d;
     d = decode("+OK\r\n ".representation);
@@ -335,6 +341,7 @@ DecodeResult decode(immutable(ubyte)[] data) @safe {
     assert(r == "xyz".representation);
 }
 
+/// decode redis values from stream of ubyte chunks
 class Decoder {
     enum State {
         Init,
@@ -348,6 +355,7 @@ class Decoder {
         size_t          _list_len;
         RedisdValue[]    _list;
     }
+    /// put next data chunk to decoder
     bool put(immutable(ubyte)[] chunk) @safe {
         assert(chunk.length > 0, "Chunk must not be emplty");
         if ( _chunks.length == 0 ) {
@@ -377,7 +385,8 @@ class Decoder {
         }
         return RedisdValue();
     }
-
+    /// try to fetch decoded value from decoder.
+    /// Return next value or value of type $(B Incomplete).
     RedisdValue get() @safe {
         RedisdValue v;
     start:
@@ -477,7 +486,7 @@ class Decoder {
         return v;
     }
 }
-
+///
 @safe unittest {
     globalLogLevel = LogLevel.info;
     RedisdValue str = {_type:ValueType.String, _svar : "abc"};

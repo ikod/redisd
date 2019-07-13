@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<title>Class Decoder</title>
+		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
+		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
+		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
+	</head>
+	<body onload="setupDdox();">
+		<nav id="main-nav">
+			<noscript>
+				<p style="color: red">The search functionality needs JavaScript enabled</p>
+			</noscript>
+			<div id="symbolSearchPane" style="display: none">
+				<form action="#" method="GET">
+					<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(40);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();"/>
+				</form>
+				<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../";
+$('#symbolSearchPane').show();</script>
+			</div>
+			<ul class="tree-view">
+				<li class="tree-view ">
+					<div class="package ">
+						<a href="../../redisd.html">redisd</a>
+					</div>
+			<ul class="tree-view">
+				<li>
+					<div class="module ">
+						<a href="../../redisd/client.html">client</a>
+					</div>
+				</li>
+				<li>
+					<div class="module selected">
+						<a href="../../redisd/codec.html">codec</a>
+					</div>
+				</li>
+				<li>
+					<div class="module ">
+						<a href="../../redisd/connection.html">connection</a>
+					</div>
+				</li>
+			</ul>
+				</li>
+			</ul>
+		</nav>
+		<div id="main-contents">
+			<h1>Class Decoder</h1><p>decode redis values from stream of ubyte chunks
+</p>
+			<div class="prototype">
+				<code class="lang-d">
+					<div class="single-prototype">
+			<span class="kwd">class</span> <span class="typ">Decoder</span>
+			<span class="pun">;</span>
+					</div>
+				</code>
+			</div>
+			
+			<section><h2>Methods</h2>
+				<table>
+					<col class="caption"/>
+					<tr>
+						<th>Name</th><th>Description</th>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../redisd/codec/Decoder.get.html" class="public">
+								<code>get</code>
+							</a>
+						</td>
+						<td>try to fetch decoded value from decoder.
+Return next value or value of type <b>Incomplete</b>.
+</td>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../redisd/codec/Decoder.put.html" class="public">
+								<code>put</code>
+							</a>
+						</td>
+						<td>put next data chunk to decoder
+</td>
+					</tr>
+				</table>
+			</section>
+			<section><h2>Example</h2>
+
+<pre class="code"><code class="lang-d"><span class="pln">globalLogLevel </span><span class="pun">= </span><span class="typ">LogLevel<wbr/></span><span class="pun">.</span><span class="pln">info</span><span class="pun">;
+</span><span class="typ">RedisdValue </span><span class="pln">str </span><span class="pun">= {</span><span class="pln">_type</span><span class="pun">:</span><span class="typ">ValueType<wbr/></span><span class="pun">.</span><span class="typ">String</span><span class="pun">, </span><span class="pln">_svar </span><span class="pun">: </span><span class="str">"abc"</span><span class="pun">};
+</span><span class="typ">RedisdValue </span><span class="pln">err </span><span class="pun">= {</span><span class="pln">_type</span><span class="pun">:</span><span class="typ">ValueType<wbr/></span><span class="pun">.</span><span class="typ">Error</span><span class="pun">, </span><span class="pln">_svar </span><span class="pun">: </span><span class="str">"err"</span><span class="pun">};
+</span><span class="kwd">auto </span><span class="pln">b </span><span class="pun">= <a href="../../redisd/codec/redisdValue.html"></span><span class="pln">redisdValue</span></a><span class="pun">(</span><span class="lit">1001</span><span class="pun">)<a href="../../redisd/codec/encode.html"></span><wbr/><span class="pun">.</span><span class="pln">encode</span></a><span class="pln"> 
+        </span><span class="pun">~ <a href="../../redisd/codec/redisdValue.html"></span><span class="pln">redisdValue</span></a><span class="pun">(</span><span class="lit">1002</span><span class="pun">)<a href="../../redisd/codec/encode.html"></span><wbr/><span class="pun">.</span><span class="pln">encode</span></a><span class="pln">
+        </span><span class="pun">~ </span><span class="pln">str<wbr/></span><span class="pun">.</span><span class="pln">encode
+        </span><span class="pun">~ </span><span class="pln">err<wbr/></span><span class="pun">.</span><span class="pln">encode
+        </span><span class="pun">~ <a href="../../redisd/codec/redisdValue.html"></span><span class="pln">redisdValue</span></a><span class="pun">(</span><span class="str">"\r\nBulkString\r\n"</span><span class="pun">)<a href="../../redisd/codec/encode.html"></span><wbr/><span class="pun">.</span><span class="pln">encode</span></a><span class="pln">
+        </span><span class="pun">~ <a href="../../redisd/codec/redisdValue.html"></span><span class="pln">redisdValue</span></a><span class="pun">(</span><span class="lit">1002</span><span class="pun">)<a href="../../redisd/codec/encode.html"></span><wbr/><span class="pun">.</span><span class="pln">encode</span></a><span class="pln">
+        </span><span class="pun">~ <a href="../../redisd/codec/redisdValue.html"></span><span class="pln">redisdValue</span></a><span class="pun">([</span><span class="lit">1</span><span class="pun">,</span><span class="lit">2</span><span class="pun">,</span><span class="lit">3</span><span class="pun">])<a href="../../redisd/codec/encode.html"></span><wbr/><span class="pun">.</span><span class="pln">encode</span></a><span class="pln">
+        </span><span class="pun">~ <a href="../../redisd/codec/redisdValue.html"></span><span class="pln">redisdValue</span></a><span class="pun">([</span><span class="str">"abc"</span><span class="pun">, </span><span class="str">"def"</span><span class="pun">])<a href="../../redisd/codec/encode.html"></span><wbr/><span class="pun">.</span><span class="pln">encode</span></a><span class="pln">
+        </span><span class="pun">~ <a href="../../redisd/codec/redisdValue.html"></span><span class="pln">redisdValue</span></a><span class="pun">(</span><span class="lit">1002</span><span class="pun">)<a href="../../redisd/codec/encode.html"></span><wbr/><span class="pun">.</span><span class="pln">encode</span></a><span class="pun">;
+
+</span><span class="kwd">foreach</span><span class="pun">(</span><span class="pln">chunkSize</span><span class="pun">; </span><span class="lit">1</span><span class="pun">..</span><span class="pln">b<wbr/></span><span class="pun">.</span><span class="pln">length</span><span class="pun">) {
+    </span><span class="kwd">auto </span><span class="pln">s </span><span class="pun">= </span><span class="kwd">new </span><span class="typ">Decoder</span><span class="pun">();
+    </span><span class="kwd">foreach </span><span class="pun">(</span><span class="pln">c</span><span class="pun">; </span><span class="pln">b<wbr/></span><span class="pun">.</span><span class="pln">chunks</span><span class="pun">(</span><span class="pln">chunkSize</span><span class="pun">)) {
+        </span><span class="pln">s<wbr/></span><span class="pun">.</span><span class="pln">put</span><span class="pun">(</span><span class="pln">c</span><span class="pun">);
+    }
+    </span><span class="kwd">auto </span><span class="pln">v </span><span class="pun">= </span><span class="pln">s<wbr/></span><span class="pun">.</span><span class="pln">get</span><span class="pun">();
+    </span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_ivar </span><span class="pun">== </span><span class="lit">1001</span><span class="pun">);
+    </span><span class="pln">v </span><span class="pun">= </span><span class="pln">s<wbr/></span><span class="pun">.</span><span class="pln">get</span><span class="pun">();
+    </span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_ivar </span><span class="pun">== </span><span class="lit">1002</span><span class="pun">);
+    </span><span class="pln">v </span><span class="pun">= </span><span class="pln">s<wbr/></span><span class="pun">.</span><span class="pln">get</span><span class="pun">();
+    </span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_svar </span><span class="pun">== </span><span class="str">"abc"</span><span class="pun">);
+    </span><span class="pln">v </span><span class="pun">= </span><span class="pln">s<wbr/></span><span class="pun">.</span><span class="pln">get</span><span class="pun">();
+    </span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_svar </span><span class="pun">== </span><span class="str">"err"</span><span class="pun">);
+    </span><span class="pln">v </span><span class="pun">= </span><span class="pln">s<wbr/></span><span class="pun">.</span><span class="pln">get</span><span class="pun">();
+    </span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_svar </span><span class="pun">== </span><span class="str">"\r\nBulkString\r\n"</span><span class="pun">);
+    </span><span class="pln">v </span><span class="pun">= </span><span class="pln">s<wbr/></span><span class="pun">.</span><span class="pln">get</span><span class="pun">();
+    </span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_ivar </span><span class="pun">== </span><span class="lit">1002</span><span class="pun">);
+    </span><span class="typ">int </span><span class="pln">lists_to_get </span><span class="pun">= </span><span class="lit">2</span><span class="pun">;
+    </span><span class="kwd">while</span><span class="pun">( </span><span class="pln">lists_to_get</span><span class="pun">&gt;</span><span class="lit">0 </span><span class="pun">) {
+        </span><span class="pln">v </span><span class="pun">= </span><span class="pln">s<wbr/></span><span class="pun">.</span><span class="pln">get</span><span class="pun">();
+        </span><span class="kwd">debug </span><span class="pun">(<a href="../../redisd.html"></span><span class="pln">redisd</span></a><span class="pun">)
+            () </span><span class="kwd">@trusted </span><span class="pun">{ </span><span class="pln">tracef</span><span class="pun">(</span><span class="str">"%s: %s, %s"</span><span class="pun">, </span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_type</span><span class="pun">, </span><span class="pln">v</span><span class="pun">, </span><span class="pln">lists_to_get</span><span class="pun">); }();
+        </span><span class="kwd">if </span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_type </span><span class="pun">== </span><span class="typ">ValueType<wbr/></span><span class="pun">.</span><span class="typ">List</span><span class="pun">) {
+            </span><span class="pln">lists_to_get</span><span class="pun">--;
+        }
+    }
+    </span><span class="pln">v </span><span class="pun">= </span><span class="pln">s<wbr/></span><span class="pun">.</span><span class="pln">get</span><span class="pun">();
+    </span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_ivar </span><span class="pun">== </span><span class="lit">1002</span><span class="pun">);
+    </span><span class="pln">v </span><span class="pun">= </span><span class="pln">s<wbr/></span><span class="pun">.</span><span class="pln">get</span><span class="pun">();
+    </span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_type </span><span class="pun">== </span><span class="typ">ValueType<wbr/></span><span class="pun">.</span><span class="typ">Incomplete</span><span class="pun">);
+}
+</span><span class="pln">info</span><span class="pun">(</span><span class="str">"test ok"</span><span class="pun">);
+</span></code></pre>
+</section>
+
+			<footer>
+				<table class="license-info">
+					<tr>
+						<th>Authors</th>
+						<td>
+							
+						</td>
+					</tr>
+					<tr>
+						<th>Copyright</th>
+						<td>
+							
+						</td>
+					</tr>
+					<tr>
+						<th>License</th>
+						<td>
+							
+						</td>
+					</tr>
+				</table>
+				<p class="faint">Generated using the DDOX documentation generator</p>
+			</footer>
+		</div>
+	</body>
+</html>

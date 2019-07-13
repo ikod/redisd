@@ -1,3 +1,4 @@
+///
 module redisd.connection;
 
 import std.algorithm;
@@ -5,16 +6,20 @@ import std.conv;
 import std.stdio;
 
 import url:URL;
-
+///
 interface Connection {
+    ///
     void connect(URL) @safe;
+    ///
     size_t send(immutable(ubyte)[]);
+    ///
     immutable(ubyte)[] recv(size_t);
+    ///
     void close();
 }
 
 alias ConnectionMaker = Connection function() @safe;
-
+/// std.socket transport
 class SocketConnection : Connection {
     import std.socket;
     private {
@@ -55,7 +60,7 @@ class SocketConnection : Connection {
     }
 
 }
-
+/// std.socket connection builder
 Connection stdConnectionMaker() @safe {
     return new SocketConnection();
 }
@@ -67,10 +72,11 @@ version(vibe) {
     import std.exception;
     import std.socket;
 
+    /// vibe-d connection builder
     Connection vibeConnectionMaker() @safe {
         return new VibeSocketConnection();
     }
-    ///
+    /// vibe-d transport
     class VibeSocketConnection: Connection {
         private {
             TCPConnection _socket;
@@ -115,11 +121,11 @@ version(hio) {
     import std.format;
     import hio.socket;
     import hio.events;
-
+    /// hio connection builder
     Connection hioConnectionMaker() @safe {
         return new HioSocketConnection();
     }
-
+    /// hio transport
     class HioSocketConnection : Connection {
         private {
             HioSocket   _socket;

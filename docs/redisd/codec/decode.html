@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<title>Function decode</title>
+		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
+		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
+		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
+	</head>
+	<body onload="setupDdox();">
+		<nav id="main-nav">
+			<noscript>
+				<p style="color: red">The search functionality needs JavaScript enabled</p>
+			</noscript>
+			<div id="symbolSearchPane" style="display: none">
+				<form action="#" method="GET">
+					<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(40);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();"/>
+				</form>
+				<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../";
+$('#symbolSearchPane').show();</script>
+			</div>
+			<ul class="tree-view">
+				<li class="tree-view ">
+					<div class="package ">
+						<a href="../../redisd.html">redisd</a>
+					</div>
+			<ul class="tree-view">
+				<li>
+					<div class="module ">
+						<a href="../../redisd/client.html">client</a>
+					</div>
+				</li>
+				<li>
+					<div class="module selected">
+						<a href="../../redisd/codec.html">codec</a>
+					</div>
+				</li>
+				<li>
+					<div class="module ">
+						<a href="../../redisd/connection.html">connection</a>
+					</div>
+				</li>
+			</ul>
+				</li>
+			</ul>
+		</nav>
+		<div id="main-contents">
+			<h1>Function decode</h1><p>deserialize from byte array
+</p>
+			<div class="prototype">
+				<code class="lang-d">
+					<div class="single-prototype">
+			<span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">typecons<wbr/></span><span class="pun">.</span><span class="typ">Tuple</span>!(redisd.codec.RedisdValue,"value",immutable(ubyte)[],"rest") <span class="pln">decode</span>
+			<span class="pun">(</span>
+			<br/>
+			&nbsp;&nbsp;<span class="kwd">immutable</span><span class="pun">(</span><span class="typ">ubyte</span><span class="pun">)</span><span class="pun">[]</span> <span class="pln">data</span>
+			<br/>
+			<span class="pun">)</span><span class="pln"> </span><span class="kwd">@safe</span><span class="pun">;</span>
+					</div>
+				</code>
+			</div>
+			
+			<section><h2>Example</h2>
+
+<pre class="code"><code class="lang-d"><span class="typ">DecodeResult </span><span class="pln">d</span><span class="pun">;
+</span><span class="pln">d </span><span class="pun">= </span><span class="pln">decode</span><span class="pun">(</span><span class="str">"+OK\r\n "<wbr/></span><span class="pun">.</span><span class="pln">representation</span><span class="pun">);
+</span><span class="kwd">auto </span><span class="pln">v </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">value</span><span class="pun">;
+</span><span class="kwd">auto </span><span class="pln">r </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">rest</span><span class="pun">;
+
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_type </span><span class="pun">== </span><span class="typ">ValueType<wbr/></span><span class="pun">.</span><span class="typ">String</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_svar </span><span class="pun">== </span><span class="str">"OK"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">r </span><span class="pun">== </span><span class="str">" "<wbr/></span><span class="pun">.</span><span class="pln">representation</span><span class="pun">);
+
+</span><span class="pln">d </span><span class="pun">= </span><span class="pln">decode</span><span class="pun">(</span><span class="str">"-ERROR\r\ngarbage\r\n"<wbr/></span><span class="pun">.</span><span class="pln">representation</span><span class="pun">);
+</span><span class="pln">v </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">value</span><span class="pun">;
+</span><span class="pln">r </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">rest</span><span class="pun">;
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_type </span><span class="pun">== </span><span class="typ">ValueType<wbr/></span><span class="pun">.</span><span class="typ">Error</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_svar </span><span class="pun">== </span><span class="str">"ERROR"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">r </span><span class="pun">== </span><span class="str">"garbage\r\n"<wbr/></span><span class="pun">.</span><span class="pln">representation</span><span class="pun">);
+
+</span><span class="pln">d </span><span class="pun">= </span><span class="pln">decode</span><span class="pun">(</span><span class="str">":100\r\n"<wbr/></span><span class="pun">.</span><span class="pln">representation</span><span class="pun">);
+</span><span class="pln">v </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">value</span><span class="pun">;
+</span><span class="pln">r </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">rest</span><span class="pun">;
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_type </span><span class="pun">== </span><span class="typ">ValueType<wbr/></span><span class="pun">.</span><span class="typ">Integer</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_ivar </span><span class="pun">== </span><span class="lit">100</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">r </span><span class="pun">== </span><span class="str">""<wbr/></span><span class="pun">.</span><span class="pln">representation</span><span class="pun">);
+
+</span><span class="pln">d </span><span class="pun">= </span><span class="pln">decode</span><span class="pun">(</span><span class="str">"\r\nfoobar\r\n\r\n:41\r\n"<wbr/></span><span class="pun">.</span><span class="pln">representation</span><span class="pun">);
+</span><span class="pln">v </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">value</span><span class="pun">;
+</span><span class="pln">r </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">rest</span><span class="pun">;
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_svar </span><span class="pun">== </span><span class="str">"foobar\r\n"</span><span class="pun">, </span><span class="pln">format</span><span class="pun">(</span><span class="str">"&lt;%s&gt;"</span><span class="pun">, </span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_svar</span><span class="pun">));
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">r </span><span class="pun">==  </span><span class="str">":41\r\n"<wbr/></span><span class="pun">.</span><span class="pln">representation</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_type </span><span class="pun">== </span><span class="typ">ValueType<wbr/></span><span class="pun">.</span><span class="typ">BulkString</span><span class="pun">);
+
+</span><span class="pln">d </span><span class="pun">= </span><span class="pln">decode</span><span class="pun">(</span><span class="str">"*3\r\n:1\r\n:2\r\n\r\nfoobar\r\nxyz"<wbr/></span><span class="pun">.</span><span class="pln">representation</span><span class="pun">);
+</span><span class="pln">v </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">value</span><span class="pun">;
+</span><span class="pln">r </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">rest</span><span class="pun">;
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">v<wbr/></span><span class="pun">.</span><span class="pln">_type </span><span class="pun">== </span><span class="typ">ValueType<wbr/></span><span class="pun">.</span><span class="typ">List</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">r </span><span class="pun">== </span><span class="str">"xyz"<wbr/></span><span class="pun">.</span><span class="pln">representation</span><span class="pun">);
+</span></code></pre>
+</section>
+
+			<footer>
+				<table class="license-info">
+					<tr>
+						<th>Authors</th>
+						<td>
+							
+						</td>
+					</tr>
+					<tr>
+						<th>Copyright</th>
+						<td>
+							
+						</td>
+					</tr>
+					<tr>
+						<th>License</th>
+						<td>
+							
+						</td>
+					</tr>
+				</table>
+				<p class="faint">Generated using the DDOX documentation generator</p>
+			</footer>
+		</div>
+	</body>
+</html>

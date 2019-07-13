@@ -1,3 +1,4 @@
+///
 module redisd.client;
 
 import std.typecons;
