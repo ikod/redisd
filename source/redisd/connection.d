@@ -25,6 +25,8 @@ class SocketConnection : Connection {
 
     this() @safe {
         _socket = new Socket(AddressFamily.INET, SocketType.STREAM);
+        _socket.setOption(SocketOptionLevel.TCP, SocketOption.TCP_NODELAY, 1);
+
     }
 
     override void connect(URL url) @safe {
