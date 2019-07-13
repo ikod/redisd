@@ -25,7 +25,7 @@ class NotAuthenticated : Exception {
         super(msg);
     }
 }
-///
+/// client API
 class Client {
 
     private {
@@ -34,7 +34,7 @@ class Client {
         Connection      _connection;
         Decoder         _input_stream;
     }
-
+    /// Constructor
     this(string url="redis://localhost:6379", ConnectionMaker connectionMaker=&stdConnectionMaker) {
         _url = parseURL(url);
         _connection_maker = connectionMaker;
@@ -60,11 +60,13 @@ class Client {
             }
         }
     }
+    /// Build redis command from command name and args.
+    /// All args must be of type string
     RedisdValue makeCommand(A...)(A args) {
         static assert(allSatisfy!(isSomeString, A), "all command parameters must be of type string");
         return redisdValue(tuple(args));
     }
-
+    ///
     RedisdValue transaction(RedisdValue[] commands) {
         RedisdValue[] results;
         RedisdValue r = this.execCommand("MULTI");
@@ -74,7 +76,7 @@ class Client {
         r = this.execCommand("EXEC");
         return r;
     }
-
+    ///
     RedisdValue[] pipeline(RedisdValue[] commands) {
         immutable(ubyte)[] data = commands.map!encode.join();
         _connection.send(data);
@@ -130,7 +132,7 @@ class Client {
         }
         return response;
     }
-
+    ///
     RedisdValue execCommand(A...)(A args) {
         immutable(ubyte)[][] data;
         RedisdValue request = makeCommand(args);
@@ -159,15 +161,15 @@ class Client {
         }
         return response;
     }
-
+    ///
     RedisdValue set(K, V)(K k, V v) {
         return execCommand("SET", k, v);
     }
-
+    ///
     RedisdValue get(K)(K k) {
         return execCommand("GET", k);
     }
-
+    ///
     RedisdValue read() {
         RedisdValue response;
         response = _input_stream.get();
