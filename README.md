@@ -9,6 +9,8 @@ Why this library?
  * redis connection url to control connection details. `redis`, `rediss`, `redis-socket` and any other scheme can be plugged in. Authentication, database selection, etc...
  * minimum overhead on handling network traffic.
 
+Docs http://ikod.github.io/redisd/
+
 Code sample:
 
 ```d

@@ -61,12 +61,12 @@ class Client {
         }
     }
     /// Build redis command from command name and args.
-    /// All args must be of type string
+    /// All args must be of type string.
     RedisdValue makeCommand(A...)(A args) {
         static assert(allSatisfy!(isSomeString, A), "all command parameters must be of type string");
         return redisdValue(tuple(args));
     }
-    ///
+    /// Build and execute redis transaction from command array.
     RedisdValue transaction(RedisdValue[] commands) {
         RedisdValue[] results;
         RedisdValue r = this.execCommand("MULTI");
@@ -76,7 +76,7 @@ class Client {
         r = this.execCommand("EXEC");
         return r;
     }
-    ///
+    /// build and execute redis pipeline from commands array.
     RedisdValue[] pipeline(RedisdValue[] commands) {
         immutable(ubyte)[] data = commands.map!encode.join();
         _connection.send(data);
@@ -132,7 +132,7 @@ class Client {
         }
         return response;
     }
-    ///
+    /// build and execute single redis command.
     RedisdValue execCommand(A...)(A args) {
         immutable(ubyte)[][] data;
         RedisdValue request = makeCommand(args);
@@ -161,15 +161,15 @@ class Client {
         }
         return response;
     }
-    ///
+    /// Simple key/value set
     RedisdValue set(K, V)(K k, V v) {
         return execCommand("SET", k, v);
     }
-    ///
+    /// Simple key/value get
     RedisdValue get(K)(K k) {
         return execCommand("GET", k);
     }
-    ///
+    /// Consume reply
     RedisdValue read() {
         RedisdValue response;
         response = _input_stream.get();
