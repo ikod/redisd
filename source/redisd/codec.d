@@ -25,20 +25,26 @@ enum ValueType : ubyte {
     List = '*',
     Error = '-',
 }
-
+///
 class BadDataFormat : Exception {
     this(string msg, string f = __FILE__, ulong l = __LINE__) @safe {
         super(msg, f, l);
     }
 }
-
+///
 class EncodeException : Exception {
     this(string msg, string f = __FILE__, ulong l = __LINE__) @safe {
         super(msg, f, l);
     }
 }
-
+///
 class WrongOffset : Exception {
+    this(string msg, string f = __FILE__, ulong l = __LINE__) @safe {
+        super(msg, f, l);
+    }
+}
+///
+class WrongDataAccess : Exception {
     this(string msg, string f = __FILE__, ulong l = __LINE__) @safe {
         super(msg, f, l);
     }
@@ -60,7 +66,21 @@ struct RedisdValue {
     }
 
     string svar() @safe const {
-        return _svar;
+        switch (_type) {
+        case ValueType.String, ValueType.BulkString, ValueType.Error:
+            return _svar;
+        default:
+            throw new WrongDataAccess("You can't use svar for non-string value");
+        }
+    }
+
+    auto ivar() @safe const {
+        switch (_type) {
+        case ValueType.Integer:
+            return _ivar;
+        default:
+            throw new WrongDataAccess("You can't use ivar for non-integer value");
+        }
     }
 
     void opAssign(long v) @safe {
@@ -100,7 +120,8 @@ struct RedisdValue {
 
 alias DecodeResult = Tuple!(RedisdValue, "value", immutable(ubyte)[], "rest");
 
-RedisdValue redisValue(T)(T v) 
+///
+RedisdValue redisdValue(T)(T v)
 if (isSomeString!T || isIntegral!T) {
     RedisdValue _v;
     static if (isIntegral!T) {
@@ -116,24 +137,25 @@ if (isSomeString!T || isIntegral!T) {
     return _v;
 }
 
-RedisdValue redisValue(T)(T v) if (isTuple!T) {
+///
+RedisdValue redisdValue(T)(T v) if (isTuple!T) {
     RedisdValue _v;
     _v._type = ValueType.List;
     RedisdValue[] l;
     foreach (element; v) {
-        l ~= redisValue(element);
+        l ~= redisdValue(element);
     }
     _v._list = l;
     return _v;
 }
 
-RedisdValue redisValue(T:U[], U)(T v) 
+RedisdValue redisdValue(T:U[], U)(T v)
 if (isArray!T && !isSomeString!T) {
     RedisdValue _v;
     _v._type = ValueType.List;
     RedisdValue[] l;
     foreach (element; v) {
-        l ~= redisValue(element);
+        l ~= redisdValue(element);
     }
     _v._list = l;
     return _v;
@@ -191,11 +213,11 @@ immutable(ubyte)[] encode(RedisdValue v) @safe {
 
     v = -1234567890;
     assert(v.encode.decode.value == v);
-    v = redisValue("abc");
+    v = redisdValue("abc");
     assert(v.encode.decode.value == v);
-    v = redisValue([1,2]);
+    v = redisdValue([1,2]);
     assert(v.encode.decode.value == v);
-    v = redisValue(tuple("abc", 1));
+    v = redisdValue(tuple("abc", 1));
     assert(v.encode.decode.value == v);
 }
 
@@ -460,15 +482,15 @@ class Decoder {
     globalLogLevel = LogLevel.info;
     RedisdValue str = {_type:ValueType.String, _svar : "abc"};
     RedisdValue err = {_type:ValueType.Error, _svar : "err"};
-    auto b = redisValue(1001).encode 
-            ~ redisValue(1002).encode
+    auto b = redisdValue(1001).encode 
+            ~ redisdValue(1002).encode
             ~ str.encode
             ~ err.encode
-            ~ redisValue("\r\nBulkString\r\n").encode
-            ~ redisValue(1002).encode
-            ~ redisValue([1,2,3]).encode
-            ~ redisValue(["abc", "def"]).encode
-            ~ redisValue(1002).encode;
+            ~ redisdValue("\r\nBulkString\r\n").encode
+            ~ redisdValue(1002).encode
+            ~ redisdValue([1,2,3]).encode
+            ~ redisdValue(["abc", "def"]).encode
+            ~ redisdValue(1002).encode;
 
     foreach(chunkSize; 1..b.length) {
         auto s = new Decoder();

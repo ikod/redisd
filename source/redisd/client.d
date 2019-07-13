@@ -6,6 +6,9 @@ import std.algorithm;
 import std.range;
 import std.string;
 
+import std.meta: allSatisfy;
+import std.traits: isSomeString;
+
 import std.experimental.logger;
 
 import redisd.connection;
@@ -58,7 +61,8 @@ class Client {
         }
     }
     RedisdValue makeCommand(A...)(A args) {
-        return redisValue(tuple(args));
+        static assert(allSatisfy!(isSomeString, A), "all command parameters must be of type string");
+        return redisdValue(tuple(args));
     }
 
     RedisdValue transaction(RedisdValue[] commands) {
